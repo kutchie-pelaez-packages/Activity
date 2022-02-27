@@ -45,19 +45,27 @@ public struct ActivityFactory: RouterFactory {
             applicationActivities: nil
         )
 
-        @Weak var logger = dependencies.logger
-        @Weak var analyticsTracker = dependencies.analyticsTracker
+        let logger = dependencies.logger
+        let analyticsTracker = dependencies.analyticsTracker
+
         viewController.completionWithItemsHandler = { [weak delegate = dependencies.delegate] activityType, successfully, items, error in
+            let activityId = activityType?.rawValue
+            let items = dependencies.items
+
+            guard let activity = Activity(rawValue: activityId ?? "") else {
+                logger.error("Failed to construct activity from \(activityId ?? "UNKNOWN")", domain: .activity)
+                safeCrash()
+                return
+            }
+
             defer { delegate?.activityDidRequestClosing() }
 
-            let activity = activityType?.rawValue ?? "UNKNOWN"
-
             if let error = error {
-                logger?.error("Failed to perform \(activity) activity, error: \(error.localizedDescription)", domain: .activityRIB)
+                logger.error("Failed to perform \(activity.name) activity with [\(items.name)] items, error: \(error.localizedDescription)", domain: .activity)
                 safeCrash()
-            } else {
+            } else if activityId.isNotNil {
                 if dependencies.trackToAnalytics {
-                    analyticsTracker?.track(
+                    analyticsTracker.track(
                         .activityPerform(
                             activity: activity,
                             successfully: successfully,
@@ -67,9 +75,9 @@ public struct ActivityFactory: RouterFactory {
                 }
 
                 if successfully {
-                    logger?.log("Successfully performed \(activity) activity", domain: .activityRIB)
+                    logger.log("Successfully performed \(activity.name) activity with [\(items.name)] items", domain: .activity)
                 } else {
-                    logger?.log("Unsuccessfully performed \(activity) activity", domain: .activityRIB)
+                    logger.log("Unsuccessfully performed \(activity.name) activity with [\(items.name)] items", domain: .activity)
                 }
             }
         }
@@ -101,5 +109,5 @@ extension ActivityItem {
 }
 
 extension LogDomain {
-    fileprivate static let activityRIB: Self = "activityRIB"
+    fileprivate static let activity: Self = "activity"
 }
