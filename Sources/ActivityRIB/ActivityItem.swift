@@ -19,14 +19,9 @@ public enum ActivityItem {
 
     var name: String {
         switch self {
-        case .image:
-            return "image"
-
-        case .text:
-            return "text"
-
-        case .file:
-            return "file"
+        case .image: return "image"
+        case .text: return "text"
+        case .file: return "file"
         }
     }
 }
